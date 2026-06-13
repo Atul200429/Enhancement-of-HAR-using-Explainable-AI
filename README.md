@@ -57,5 +57,4 @@ Python, scikit-learn, pandas, NumPy, SHAP, LIME, Flask, Matplotlib, Seaborn
 
 ## 👤 Author
 
-**Atul Krishna**
-B.Tech Computer Science and Information Technology, COER University, Roorkee
+**[Atul Krishna](https://github.com/Atul200429)**
