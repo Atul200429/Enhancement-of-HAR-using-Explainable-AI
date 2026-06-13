@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HAR · Explainable AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #050810;
+    --surface: #0c1120;
+    --card:    #111827;
+    --border:  #1e2d4a;
+    --accent:  #3b82f6;
+    --accent2: #06b6d4;
+    --green:   #10b981;
+    --yellow:  #f59e0b;
+    --red:     #ef4444;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+    --glow:    rgba(59,130,246,0.15);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── animated grid background ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── radial glow centre ── */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -20%; left: 50%;
+    transform: translateX(-50%);
+    width: 800px; height: 600px;
+    background: radial-gradient(ellipse, rgba(59,130,246,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative; z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* ── header ── */
+  header { text-align: center; margin-bottom: 56px; }
+
+  .badge {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #e2e8f0 30%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 14px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── stat pills row ── */
+  .stats {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 28px;
+  }
+  .stat-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    padding: 6px 18px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .stat-pill span { color: var(--accent2); font-weight: 700; }
+
+  /* ── card ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .card-title {
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+
+  /* ── upload zone ── */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 40px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: var(--glow);
+  }
+  .upload-zone input[type="file"] {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer;
+    width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 36px; margin-bottom: 12px; }
+  .upload-text { color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .upload-text strong { color: var(--text); }
+  #file-name {
+    margin-top: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--accent2);
+  }
+
+  /* ── divider ── */
+  .divider {
+    display: flex; align-items: center; gap: 16px;
+    margin: 20px 0; color: var(--muted);
+    font-family: 'Space Mono', monospace; font-size: 12px;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ── buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 14px 28px; border-radius: 10px;
+    font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 600;
+    border: none; cursor: pointer; transition: all .2s;
+    width: 100%;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 24px rgba(59,130,246,0.3);
+  }
+  .btn-primary:hover { background: #2563eb; transform: translateY(-1px); }
+
+  .btn-secondary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-secondary:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+
+  /* ── result card ── */
+  #result-card { display: none; }
+
+  .result-hero {
+    display: flex; align-items: center; gap: 24px;
+    margin-bottom: 32px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .result-icon-wrap {
+    width: 80px; height: 80px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    flex-shrink: 0;
+    animation: popIn .4s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes popIn {
+    from { transform: scale(.5); opacity: 0; }
+    to   { transform: scale(1);  opacity: 1; }
+  }
+
+  .result-label {
+    font-size: 11px; font-family: 'Space Mono', monospace;
+    letter-spacing: 2px; color: var(--muted); margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .result-activity {
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .confidence-badge {
+    display: inline-block;
+    background: rgba(16,185,129,.15);
+    border: 1px solid rgba(16,185,129,.3);
+    color: var(--green);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    padding: 3px 12px;
+    border-radius: 20px;
+  }
+
+  /* ── probability bars ── */
+  .bars-title {
+    font-size: 12px; font-family: 'Space Mono', monospace;
+    letter-spacing: 2px; color: var(--muted); text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+
+  .bar-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 60px;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .bar-icon { font-size: 18px; text-align: center; }
+  .bar-track {
+    background: var(--surface);
+    border-radius: 6px;
+    height: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width .8s cubic-bezier(.25,.46,.45,.94);
+    width: 0%;
+  }
+  .bar-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+  }
+  .bar-name {
+    font-size: 12px; color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    grid-column: 2;
+    margin-bottom: -8px;
+    margin-top: 4px;
+  }
+
+  /* ── error ── */
+  .error-box {
+    background: rgba(239,68,68,.1);
+    border: 1px solid rgba(239,68,68,.3);
+    color: var(--red);
+    padding: 14px 18px;
+    border-radius: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    margin-top: 16px;
+    display: none;
+  }
+
+  /* ── spinner ── */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── footer ── */
+  footer {
+    text-align: center;
+    margin-top: 48px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+  }
+
+  @media (max-width: 520px) {
+    .btn-row { grid-template-columns: 1fr; }
+    .result-hero { flex-direction: column; text-align: center; }
+    .card { padding: 24px 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="badge">XAI · Machine Learning</div>
+    <h1>Human Activity<br>Recognition</h1>
+    <p class="subtitle">Predict human activity from smartphone sensor data</p>
+    <div class="stats">
+      <div class="stat-pill"><span>562</span> sensor features</div>
+      <div class="stat-pill"><span>6</span> activity classes</div>
+      <div class="stat-pill"><span>SHAP</span> + LIME explainability</div>
+      <div class="stat-pill">VotingClassifier <span>ensemble</span></div>
+    </div>
+  </header>
+
+  <!-- ── Input Card ── -->
+  <div class="card">
+    <div class="card-title">// Input Sensor Data</div>
+
+    <div class="upload-zone" id="drop-zone">
+      <input type="file" id="csv-file" accept=".csv"/>
+      <div class="upload-icon">📂</div>
+      <div class="upload-text">
+        <strong>Drop your CSV file here</strong><br>
+        or click to browse — one row of 562 sensor features
+      </div>
+      <div id="file-name"></div>
+    </div>
+
+    <div class="divider">or</div>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="random-btn" onclick="predict(true)">
+        🎲 Try Random Sample
+      </button>
+      <button class="btn btn-primary" id="predict-btn" onclick="predict(false)">
+        <span class="spinner" id="spinner"></span>
+        <span id="btn-text">⚡ Predict Activity</span>
+      </button>
+    </div>
+
+    <div class="error-box" id="error-box"></div>
+  </div>
+
+  <!-- ── Result Card ── -->
+  <div class="card" id="result-card">
+    <div class="card-title">// Prediction Result</div>
+
+    <div class="result-hero">
+      <div class="result-icon-wrap" id="res-icon">?</div>
+      <div>
+        <div class="result-label">Detected Activity</div>
+        <div class="result-activity" id="res-label">—</div>
+        <div class="confidence-badge" id="res-conf">—</div>
+      </div>
+    </div>
+
+    <div class="bars-title">// Confidence Scores — All Classes</div>
+    <div id="bars-container"></div>
+  </div>
+
+  <footer>
+    Enhancement of Human Activity Recognition Using Explainable AI<br>
+    COER University · B.Tech CSE · UCI HAR Dataset
+  </footer>
+
+</div>
+
+<script>
+  const BAR_COLORS = [
+    '#3b82f6','#06b6d4','#10b981','#f59e0b','#8b5cf6','#ec4899'
+  ];
+
+  // ── drag/drop visual feedback ──
+  const dz = document.getElementById('drop-zone');
+  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', ()  => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('dragover');
+    const f = e.dataTransfer.files[0];
+    if (f) { document.getElementById('csv-file').files = e.dataTransfer.files; updateFileName(f.name); }
+  });
+
+  document.getElementById('csv-file').addEventListener('change', function() {
+    if (this.files[0]) updateFileName(this.files[0].name);
+  });
+
+  function updateFileName(name) {
+    document.getElementById('file-name').textContent = '📄 ' + name;
+  }
+
+  function setLoading(on) {
+    document.getElementById('spinner').style.display   = on ? 'block' : 'none';
+    document.getElementById('btn-text').textContent    = on ? 'Predicting…' : '⚡ Predict Activity';
+    document.getElementById('predict-btn').disabled   = on;
+    document.getElementById('random-btn').disabled    = on;
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('error-box');
+    box.textContent = '⚠ ' + msg;
+    box.style.display = 'block';
+  }
+
+  function hideError() {
+    document.getElementById('error-box').style.display = 'none';
+  }
+
+  async function predict(random = false) {
+    hideError();
+    setLoading(true);
+
+    const fd = new FormData();
+
+    if (random) {
+      fd.append('random', 'true');
+    } else {
+      const file = document.getElementById('csv-file').files[0];
+      if (!file) { showError('Please upload a CSV file first, or use Try Random Sample.'); setLoading(false); return; }
+      fd.append('file', file);
+    }
+
+    try {
+      const res  = await fetch('/predict', { method: 'POST', body: fd });
+      const data = await res.json();
+
+      if (data.error) { showError(data.error); setLoading(false); return; }
+
+      renderResult(data);
+    } catch(e) {
+      showError('Server error: ' + e.message);
+    }
+
+    setLoading(false);
+  }
+
+  function renderResult(data) {
+    // hero
+    document.getElementById('res-icon').textContent  = data.icon;
+    document.getElementById('res-label').textContent = data.prediction.replace(/_/g, ' ');
+    document.getElementById('res-conf').textContent  = `${data.confidence}% confidence`;
+
+    // bars
+    const container = document.getElementById('bars-container');
+    container.innerHTML = '';
+    data.scores.forEach((s, i) => {
+      const isTop = i === 0;
+      const color = isTop ? BAR_COLORS[0] : BAR_COLORS[i] || '#64748b';
+
+      container.innerHTML += `
+        <div style="margin-bottom:16px;">
+          <div class="bar-row">
+            <div class="bar-icon">${s.icon}</div>
+            <div>
+              <div style="font-size:12px;font-family:'Space Mono',monospace;color:${isTop ? '#e2e8f0' : 'var(--muted)'};margin-bottom:4px;">
+                ${s.label.replace(/_/g,' ')}
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" id="bar-${i}" style="background:${color};"></div>
+              </div>
+            </div>
+            <div class="bar-label" style="color:${color};">${s.prob}%</div>
+          </div>
+        </div>`;
+    });
+
+    // show card then animate bars
+    const card = document.getElementById('result-card');
+    card.style.display = 'block';
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    setTimeout(() => {
+      data.scores.forEach((s, i) => {
+        const el = document.getElementById('bar-' + i);
+        if (el) el.style.width = s.prob + '%';
+      });
+    }, 100);
+  }
+</script>
+</body>
+</html>
